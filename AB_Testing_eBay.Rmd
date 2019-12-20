@@ -1,0 +1,218 @@
+---
+title: "eBayAssignment_RanDou_QimoLi"
+author: "Ran Dou, Qimo Li"
+date: "10/18/2018"
+output: 
+  html_document:
+    css: style.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE}
+#Clears the environment window pane in RStudio
+rm(list=ls())
+
+#Install required packages
+pkg <- c("tidyverse", "knitr","RColorBrewer", "sjPlot")  #a list of packages
+pkg.uninstalled <- pkg[!(pkg %in% installed.packages())]
+if (length(pkg.uninstalled)) {install.packages(new.pkg, repos ="http://cran.rstudio.com")}
+
+#Library packages
+library(tidyverse)
+library(knitr)
+library(RColorBrewer)  #required for using display.brewer.all()
+library(sjPlot)  #required for using tab_model() to convert regression summay into beautiful format
+```
+
+## BUS256a: Marketing Analytics
+### Analysis 2: eBay Assignment
+
+***  
+
+> ### PART A  Insert and Clean Data
+
+First of all, we loaded the dataset of eBay in R. Then, we created a new column called `rDate` base on the original column `date` and replaced it.
+
+```{r, message=FALSE}
+#Set work directory to where includes the eBay data
+setwd("~/Desktop")
+
+#Load the dataset in R
+eBayData <- read.csv("eBayData.csv")
+```
+
+```{r}
+#Create a new column called 'rDate' convert the 'date' column into the 'date' datatype. 
+ebay <- eBayData %>%
+  mutate(rDate = as.Date(date, format = "%m/%d/%Y")) %>%  #convert 'date' column into the right datatype
+  select(rDate, dma, isTreatmentPeriod, isTreatmentGroup, revenue)  #change the order of the columns
+```
+
+***  
+
+> ### PART B  Treatment Period
+
+According to the analysis below, the earliest date in the treatment period is 2012-05-22, and the latest date in the treatment period is 2012-07-22. This treatment lasted for two months.  
+During the treatment period, the randomly selected areas in the treatment group were no longer shown search advertisements from eBay. However, the designed market areas in the control group continued to show ads from eBay.  
+
+```{r}
+#Determine the earliest and latest date in the treatment period
+task2min <- min(ebay$rDate[ebay$isTreatmentPeriod==1])
+task2max <- max(ebay$rDate[ebay$isTreatmentPeriod==1])
+sprintf("The date that started the treatment period is %s", task2min)
+sprintf("The date that ended the treatment period is %s", task2max)
+```
+
+***  
+
+> ### PART C Treatment Group
+
+```{r}
+#Create a new dataframe that only contains the DMAs that are in the treatment group.
+ebay_treatment <- ebay[ebay$isTreatmentGroup==1, ]
+#Create a new dataframe that only contains the DMAs that are in the control group.
+ebay_control <- ebay[ebay$isTreatmentGroup==0, ]
+#Run the regression that compares log(revenue) of the treatment group in the pre-treatment period and in the treatment period.
+lm_c <- lm(log(revenue)~factor(isTreatmentPeriod), data = ebay_treatment)
+#Use the function tab_model() to display the result of the regression.
+tab_model(lm_c, show.se = TRUE, show.stat = TRUE, show.p = TRUE, digits = 4, digits.p = 4, title = "Treatment Group: log(revenue)~factor(isTreatmentPeriod)", pred.labels = c("Intercept", "Treatment Period"))
+```
+The regression above compares `log(revenue)` of the treatment group in the pre-treatment period and the treatment period. To avoid multicollinearity, R eliminates the first level of `factor(isTreatmentPeriod)`, thus, it only returns one explanatory variables (isTreatmentPeriod==1).
+$$
+\ln(revenue) = 10.9486 - 0.0394 * D_{period}\\
+\begin{cases}
+  ln(revenue) = 10.9486 & \text{ for pre-treatment period}\\    
+  ln(revenue) = 10.9092 & \text{ for post-treatment period}   
+\end{cases}
+$$
+As the result of the regression `lm_c` shows, the estimator of `isTreatmentPeriod` is -0.0394, which indicates that the revenue of the treatment group during the post-treatment period is 3.94% less than that during the pre-treatment period. However, it seems like the advertising wasn't very effective because the estimator is close to zero.   
+$$
+H_0 \colon \hat{\beta}_{period}=0\\
+H_1 \colon \hat{\beta}_{period}\neq0
+$$
+**Effectiveness of Advertising**  
+The estimator of `isTreatmentPeriod` shows the difference of estimated average revenue of the treatment group between the two periods (pre-treatment and post-treatment). Statistically, the t-test of this estimator is to check whether there is a significant distinction between the two estimated average revenue.  
+For the t-test, the null hypothesis that the estimator of `isTreatmentPeriod` is equal to zero, and the alternative hypothesis that the estimator of `isTreatmentPeriod` is not equal to zero. The p-value of this hypothesis test is approximately 0.0474, which is smaller than 0.05. It is reasonable for us to reject the null hypothesis at 5% significance level and in favor of the alternative hypothesis that there is a significant difference between the revenue of DMAs in treatment group during two periods. Therefore, we came up with the conclusion that the advertising should be considered as effective.
+
+***
+
+> ### PART D Randomization
+
+```{r}
+#Create a new dataframe that only contains observations in the pre-treatment period.
+ebay_pre <- ebay[ebay$isTreatmentPeriod==0,]
+#Run the regression that compares log(revenue) of the treatment group and the control group in the pre-treatment period.
+lm_d <- lm(log(revenue)~factor(isTreatmentGroup), data = ebay_pre)
+#Use the function tab_model() to display the result of the regression.
+tab_model(lm_d, show.se = TRUE, show.stat = TRUE, show.p = TRUE, digits = 4, digits.p = 4, title = "Pre-treatment Period: log(revenue)~factor(isTreatmentGroup)", pred.labels = c("Intercept", "treatment Group"))
+```
+The regression above compares the log(revenue) of the treatment group and the control group in the pre-treatment period. To avoid multicollinearity, R eliminates the first level of `factor(isTreatmentGroup)`, thus, it only returns one explanatory variables (isTreatmentGroup==1).  
+$$
+\ln(revenue) = 10.9627 - 0.0141 * D_{group}\\
+\begin{cases}
+  ln(revenue) = 10.9627 & \text{ for control group}\\    
+  ln(revenue) = 10.9486 & \text{ for treatment group}   
+\end{cases}
+$$
+As the result of the regression `lm_d` shows, the estimator of `isTreatmentGroup` is -0.0141, which means that the treatment group has 1.41% less revenue than the control group during the pre-treatment period. Intuitively, it seems like the advertising wasn't very effective because the correlation between the treatment and the revenue because the estimator is close to zero.
+$$
+H_0 \colon \hat{\beta}_{group}=0\\
+H_1 \colon \hat{\beta}_{group}\neq0
+$$
+**Purpose of the Randomization Check**  
+The purpose of this randomization check is to check whether the designed market areas are assigned to each group randomly by verifying whether the estimated average revenue for each of the two groups in the pre-treatment period is similar. It is important to do this check to make sure that the areas in two group were under the same situation before the treatment was applied.  
+**Analysis of the Regression**  
+The estimator of `isTreatmentGroup` shows the difference of estimated average revenue between the two groups (treatment and control) in the pre-treatment period. Statistically, the t-test of this estimator is to check whether there is a significant difference between the two estimated average revenue.  
+For the t-test, the null hypothesis that the estimator of `isTreatmentGroup` is equal to zero, and the alternative hypothesis that the estimator of `isTreatmentGroup` is not equal to zero. The p-value of this hypothesis test is approximately 0.5698, which is much greater than 0.1. We fail to reject the null hypothesis at the 10% significance level. There is no significant difference between the revenue of DMAs in two groups during the pre-treatment period. Therefore, it's reasonable for us to believe from the statistical level, the areas were separated into two groups randomly.
+
+***
+
+> ### PART E Effectiveness of eBay ads
+
+```{r}
+#Create a new dataframe that only contains observations in the post-treatment period.
+ebay_post <- ebay[ebay$isTreatmentPeriod==1,]
+#Run the regression that has log(revenue) as the dependent variable and isTreatmentGroup as the independent variable.
+lm_e <- lm(log(revenue)~factor(isTreatmentGroup), data = ebay_post)
+
+#Use the function tab_model() to display the result of the regression.
+tab_model(lm_e, show.se = TRUE, show.stat = TRUE, show.p = TRUE, digits = 4, digits.p = 4, title = "Post-treatment Period: log(revenue)~factor(isTreatmentGroup)", pred.labels = c("Intercept", "treatment Group"))
+```
+The regression above has `log(revenue)` as the dependent variable and `isTreatmentGroup` as the independent variable. To avoid multicollinearity, R eliminates the first level of `factor(isTreatmentGroup)`, thus, it only returns one explanatory variable (isTreatmentGroup==1).  
+$$
+\ln(revenue) = 10.9167 - 0.0075 * D_{group}\\
+\begin{cases}
+  ln(revenue) = 10.9167 & \text{ for control group}\\    
+  ln(revenue) = 10.9092 & \text{ for treatment group}   
+\end{cases}
+$$
+As the result of the regression `lm_e` shows, the estimator of `isTreatmentGroup` is -0.0075, which means that the treatment group has 0.75% less in the revenue than the control group. However, it seems like the advertising wasn't very effective because the estimator is close to zero.
+$$
+H_0 \colon \hat{\beta}_{group}=0\\
+H_1 \colon \hat{\beta}_{group}\neq0
+$$
+**Effectiveness of Advertising**  
+The estimator of `isTreatmentGroup` shows the difference of estimated average revenue between the two groups (treatment and control) in the post-treatment period. Statistically, the t-test of this estimator is to check whether there is a significant difference between the two estimated average revenue.  
+For the t-test, the null hypothesis that the estimator of `isTreatmentGroup` is equal to zero, and the alternative hypothesis that the estimator of `isTreatmentGroup` is not equal to zero. The p-value of this hypothesis test is approximately 0.7406, which is much greater than 0.1. We fail to reject the null hypothesis at the 10% significance level. There is no significant difference between the revenue of DMAs in two groups during the post-treatment period. Therefore, it's reasonable for us to believe, the effect of eBay ads is not statistically significant.  
+**Purpose of the Control Group**  
+The purpose of the control group here is to measure the effect of the treatment by comparing the revenue between the control group and the experimental group. Because the effect of a treatment is unknown, including a control group in the experiment can help people to determine whether a treatment under investigation has a statistically significant influence on the treatment group, and the possibility of making an erroneous conclusion can be reduced to some extent.  
+**Uncounted Factor in Part C**  
+According to the analysis above, the difference between the regression in part(c) and part(e) is that the first regression didn't take other factors that may affect DMAs' revenue into consideration. Other factors may include the overall economic fluctuation in the DMAs during that period. Once the influential external factors are included in the regression, the possibility of making a wrong conclusion might be reduced. Therefore, with the result of regression in part(e), it's reasonable for us to say that the conclusion in part(c) is no longer reliable because the significant coefficient estimator might be a result of regional economic fluctuation.  
+**Measure of Fit**  
+$R^2$ is a statistical measure that represents the proportion of the variance for a dependent variable that's explained by an independent variable. The $R^2$ of this regression is 8.422e-06. A low $R^2$ means the explanatory variable only explains a tiny part of the variance for the log(revenue). The reason might be, other influential factors are included as the error $u_i$ rather than independent variable. However, the $R^2$ of this regression does not affect the interpretation or confidence in the estimate of the effectiveness of advertising because even noisy, high-variability data can have a significant trend. Therefore, although $R^2$ of the regression is low, the p-value of the coefficient estimator can still be convincing.
+
+***
+
+> ### PART F  Effectiveness of Logistical Regression
+
+All of the regressions above were run on `log(revenue)` rather than `revenue`. Intuitively, this was the right choice because logistical regression can show the change in percentage format, which can eliminate the impact of the absolute value differences. Therefore, although the estimator in `lm_e` was not statistically significant, it indeed has practical meaning.  
+To prove this conjecture, we did the same regression in part(e) again, but this time we ran it on `revenue`.
+```{r}
+lm_f <- lm(revenue~factor(isTreatmentGroup), data = ebay_post)
+tab_model(lm_f, show.se = TRUE, show.stat = TRUE, show.p = TRUE, digits = 4, digits.p = 4, title = "Post-treatment Period: revenue~factor(isTreatmentGroup)", pred.labels = c("Intercept", "treatment Group"))
+```
+
+$$
+\ln(revenue) = 100418.3358 + 27652.5432 * D_{group}\\
+\begin{cases}
+  ln(revenue) = 100418.3358 & \text{ for control group}\\    
+  ln(revenue) = 128070.9 & \text{ for treatment group}   
+\end{cases}
+$$
+As the result of the regression `lm_f` shows, the estimator of `isTreatmentGroup` is 27652.5432, which means that the treatment group has 27652.5432 more in the revenue than the control group. The p-value of the estimator is $7.81e-11 < 0.01 $, so it is statistically significant on the 1% significance level. However, we highly doubted that this was caused by the regional differences. Therefore, we draw the plot below to visualize the revenue.
+```{r, message=FALSE}
+kable(ebay %>%
+  group_by(isTreatmentGroup, isTreatmentPeriod) %>%
+  summarise(AVGrevenue = mean(revenue)), align = "c")
+
+ebay %>%
+  mutate(isTreatmentGroup = ifelse(isTreatmentGroup == 1, "Treatment Group", "Control Group")) %>%
+  group_by(rDate, isTreatmentGroup) %>%
+  mutate(avg = mean(revenue)) %>%
+  ggplot(aes(x = rDate, y = avg, col = factor(isTreatmentGroup))) +
+  geom_point(size = 0.5, alpha = 0.6) +
+  geom_smooth(size = 0.5, se = FALSE) +
+  scale_color_manual(values = c("black", "#FF6666")) +
+  labs(title = "Average Revenue for Treatment and Control Group", y = "Average Revenue", x = "Date", color = "Group") +
+  theme_minimal(base_family="Times New Roman") +
+  theme(legend.position = "bottom")
+```
+
+From the plot above, we observed that the average revenue for the treatment group is indeed higher than the average revenue for the control group consistently, so simply comparing the absolute value is not meaningful. Therefore, we think using `log(revenue)` is more appropriate.
+
+***
+
+> ### PART G  Conclusion
+
+**Findings**  
+From the above analyses, we have the following four findings:  
+1) When only comparing the revenue of treatment group between pre-treatment and post-treatment period, the eBay advertisements seems effective.  
+2) We ensured that the designed market areas are assigned to each group randomly by verifying that the estimated average revenue for two groups in the pre-treatment period is similar.  
+3) When comparing the revenue of the treatment group with the control group, the eBay advertisements seems ineffective.  
+4) It is more appropriate to run the regression on log(revenue) rather than revenue because logarithmic transforms permit modeling relations in “percentage” terms rather than linearly. 
+
+**Effectiveness**  
+We generally think that showing search advertisements from eBay is not effective in improving sales, same as the conclusion we made from the result of part(e). However, We believe that there must be other factors that may influence the sales, but the proof of this conjecture needs sufficient relevant data.

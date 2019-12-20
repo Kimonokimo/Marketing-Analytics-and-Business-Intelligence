@@ -1,0 +1,358 @@
+---
+title: "Zhiqi Chen_Shengzhe Xu_Qimo Li_Black Friday"
+author: "Zhiqi Chen, Shengzhe Xu, Qimo Li"
+date: "2018/10/11"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(readr)
+BF = read_csv("BlackFriday.csv")
+library(tidyverse)
+library(knitr)
+library(RColorBrewer)
+options(scipen = 20)
+```
+
+***
+
+> #### 1) Introduction
+
+**This should briefly talk about the data problem, why is it interesting to look at this problem (i.e. managerial objective), and the broad goals of your project.**
+
+One of the reasons that made us choose to work with this dataset is we all love shopping, especially when everything is on sale. Given that Thanksgiving is coming soon, we hope that by doing this analysis, we might gain some insights into consumer behaviors of Black Friday shoppers and then improve our shopping experience.  
+Obviously, what I mentioned above is just a tiny part of our goal. What we are looking for, by doing this project, is to help brands and stores to achieve some managerial objectives so that they can find the most efficient way to boost their sales, and thus to maximize their profits. Firstly, we want to look at how customers' social background and demographic information, such as gender, income, and marital status, change their shopping behaviors and their decisions on the amount they spend. We can figure this out by doing a regression.  
+Furthermore, we are interested in finding out which specific categories of products are more popular among certain customers on Black Friday. For example, we might be able to see that category 1 is more popular among female shoppers, while category 5 attract more males. This information is very valuable as it has the potential to tell brands what kinds of customers they should target when they are doing promotions and marketing activities.  
+In conclusion, our ultimate goal is to better understand customers and their shopping behaviors on the most important annual shopping day, Black Friday. Supported by the results of our analysis, we hope to help brands identify and focus on the most valuable market segments, promote their products more specifically and efficiently, and ultimately have a higher sales, lower costs, and greater profit.
+
+***
+
+> #### 2) Data Description
+
+**a) Describe the “conceptual” measure types of the different variables in your data.**
+
+```{r}
+variable_type <- matrix(c("User_ID", "Product_ID", "Gender", "Age", "Occupation", "City_Category", "Stay_In_Current_City_Years", "Marital_Status","Product_Category_1","Product_Category_2","Product_Category_3","Purchase","Nominal Discrete","Nominal Discrete","Nominal Discrete","Oridinal Discrete","Nominal Discrete","Nominal Discrete","Oridinal Discrete","Nominal Discrete","Nominal Discrete","Nominal Discrete","Nominal Discrete","Ratio Continuous"), ncol = 12, byrow = TRUE)
+rownames(variable_type) <- c("variable","type")
+print(variable_type)
+```
+
+**b) Data Cleaning**
+
+We used "0" to represent all the missing values in the dataset.  
+We changed the data type of "Purchase" from "integer" to "numeric", and changed data types of other variables to "factor".
+
+```{r}
+BF[is.na(BF)] = 0
+BF = BF %>% mutate_if(sapply(BF, is.character), as.factor)
+BF = BF %>% mutate_if(sapply(BF, is.integer), as.factor)
+BF = BF %>% mutate_if(sapply(BF, is.numeric), as.factor)
+BF$Purchase = as.numeric(BF$Purchase)
+str(BF)
+```
+
+***
+
+> #### 3) Summary statistics and Data Visualizations
+
+**Chart 1**
+
+```{r}
+Age_Purchase = BF %>%
+  group_by(Age) %>%
+  summarize(n = n_distinct(User_ID),
+            Total_Purchase = sum(Purchase)) %>%
+  mutate(Avg_Purchase = Total_Purchase/n)
+ggplot(Age_Purchase, aes(x = Age, y = Avg_Purchase)) +
+  geom_bar(stat = "identity", alpha = 0.6, width = 0.5, fill = "cornflowerblue") +
+  labs(y = "Avg Purchase") +
+  ggtitle("How Age Affects Purchase") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_y_continuous(breaks = c(0, 200000, 400000,600000), labels = c("0","200k","400k","600k"))
+```
+
+* The reasons that we chose these variables  
+We used age as the x-variable and average purchase as the y-variable to see what age group is likely to spend more.  
+* The reasons that we used this type of visualization  
+We used a bar chart because it can clearly show the average purchase of different age groups.
+* Improvements to the graph  
+We used the scale_y_continuous function to set breaks and lables of the y-axis to make it more readable.  
+We used "cornflowerblue" color to fill the bar to provide a nice contrast with the background.  
+* The question we are trying to answer  
+We want to know the relationship between age and average purchase. in other words, we are trying to answer how age affects purchase.  
+* Conclusion  
+As the age grows, total purchase of customers first goes up and then decreases. Young people have the strongest purchasing power. Customers from 26 to 35 years old purchase the most, buying above 750 thousand dollars on average. 18 to 25 year-old customers and 36 to 45 year-old customers have similar purchasing power, their average purchases are about 650 thousand dollars. People in other age groups have relatively small purchasing power.
+
+**Chart 2**
+
+```{r}
+Gender_Purchase = BF %>%
+  group_by(User_ID, Gender) %>% 
+  summarise(n = n_distinct(User_ID),
+            Total_Purchase = sum(Purchase)) %>%
+  mutate(Avg_Purchase = Total_Purchase/n)
+ggplot(Gender_Purchase, aes(x = Gender, y = Avg_Purchase, fill = Gender)) +
+  geom_boxplot() +
+  labs(title = "How Gender Affacts Purchase", y = "Avg Purchase") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_y_log10()
+```
+
+* The reasons that we chose these variables  
+For this graph, we chose gender as our major variable to break up the average purchase amounts. The average purchase is a continuous variable, so that we can derive more descriptive statistics from it. Next, gender is a dummy variable that can clearly and easily be used to make a comparison.
+* The reasons that we used this type of visualization  
+We used a box plot to map this graph. Boxplot can display statistics more precisely and directly, and it shows the median, two hinges and two whiskers in a single graph. Moreover, we can have a better understanding of the purchase distribution between males and females by comparing the positioning of two individual boxes.  
+* Improvements to the graph  
+We set the scale of y for the boxplot to make it display more directly.  
+To have our plots follow the same color palette, we changed the fill of boxes.  
+We set the title for the graph and the label for the x and y-axis.  
+* The question we are trying to answer  
+We are trying to provide a direct view of the distribution of purchase for males and females. Throughout the graph, we want to find the distribution interval and the median for males and females. Moreover, we want to figure out whether males or females purchase more during the Black Friday.
+* Conclusion  
+We can conclude from the graph that males have a wider distribution interval than female. This result might be influenced by the quantity of value in the data frame, but the main idea is that males are capable of providing a wider range of choices for stores. Therefore, we made preliminary conclusion that, on average, males purchase more than females during the Black Friday.
+* Note  
+A similar glot is found here: https://www.kaggle.com/monethong/who-bought-what
+
+**Chart 3**
+
+```{r}
+Marital_Purchase = BF %>%
+  group_by(City_Category, Marital_Status) %>% 
+  summarise(n = n_distinct(User_ID),
+            Total_Purchase = sum(Purchase)) %>%
+  mutate(Avg_Purchase = Total_Purchase/n)
+ggplot(Marital_Purchase, aes(x = City_Category, y = Avg_Purchase, fill = Marital_Status)) +
+  geom_bar(stat = "identity", width = 0.5, position = "dodge") +
+  scale_y_continuous(breaks = seq(0, 1000000, 500000), labels = c("0","500k","1m")) +
+  labs(title = "How Marriage Influences Purchase Among Cities", x = "Cities", y = "Avg Purchase") +
+  theme(plot.title = element_text(hjust = 0.5))
+```
+
+* The reasons that we chose these variables  
+We chose these variables because we want to see whether marriage causes a gap on average purchase amount and whether a difference of that gap exists among three cities.  
+* The reasons that we used this type of visualization  
+A bar chart is perfect here because it allows us to see directly how unmarried and married shoppers of three different cities spend differently. It is also very clear to see shoppers of which city shoppers have the strongest purchase power (tallest average purchase bars).  
+* Improvements to the graph  
+A centered title is added for better understanding of the graph. Axes'names and the y-axis unit are changed as well. We also dodged the bars for better comparison.  
+* The question we are trying to answer  
+We are trying to answer the question of whether marriage is a determinant of average purchase amount, and how this determinant is different among three cities.  
+* Conclusion  
+We can conclude that marriage is not a key determinant of average purchase amount as there is only a little difference in purchase between married and unmarried shoppers across three cities. We can also see from the graph that shoppers of City A and City B has a much bigger purchase power than those of City C.
+* Note  
+A similar glot/analysis is found here: https://www.kaggle.com/monethong/who-bought-what
+
+**Chart 4**
+
+```{r}
+Occupation_Purchase = BF %>%
+  group_by(Occupation) %>% 
+  summarize(n = n_distinct(User_ID),
+            Total_Purchase = sum(Purchase)) %>%
+  mutate(Avg_Purchase = Total_Purchase/n)
+ggplot(Occupation_Purchase, aes(x = Occupation, y = Avg_Purchase, fill = Occupation)) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(breaks = seq(0,800000,200000), labels = c("0", "200k", "400k", "600k", "800k")) +
+  labs(title = "How Occupation Influences Purchase", y = "Avg Purchase") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  coord_flip()
+```
+
+* The reasons that we chose these variables  
+We chose occupation on the x-axis as an independent variable and average purchase on the y-axis as a dependent variable because we want to see how people with different occupations spend differently. In other words, we were hoping to see if occupation has an effect on the purchase amount.  
+* The reasons that we used this type of visualization  
+We chose to use a bar graph because it can clearly show which occupation spends the most (with the tallest bar) and which spends the least.  
+* Improvements to the graph 
+We improved the graph by changing the label of the y-axis and adding a centered title to the graph to make it more understandable. We also added colors to the bars to distinguish different occupations and to make the graph more aesthetically appealing.  
+* The question we are trying to answer  
+As we have mentioned, we want to see if occupation is a determinant of purchase amount. If so, we would want to find out which occupation spends the most and possibly the reason behind it.  
+* Conclusion  
+We can conclude that spending accross occupations does not vary significantly. Occupations 5, 19 and 20 are spending slightly higher than many of the rest, while occupations 9, 10 and 13 spend the least. However, just this graph itself does not tell us much. Later on, we might need to put both occupation data and product category data into one table to see if certain product category are more attractive to certain occupations than to others. This will give us valuable information for us to achieve our ultimate goal of helping brands determine their most important customers.
+
+**Chart 5**
+
+```{r}
+City_Purchase = BF %>%
+  group_by(City_Category, Gender) %>% 
+  summarize(n = n_distinct(User_ID),
+            Total_Purchase = sum(Purchase)) %>%
+  mutate(Avg_Purchase = Total_Purchase/n)
+ggplot(City_Purchase, aes(x = City_Category, y = Avg_Purchase, fill = Gender)) +
+  geom_bar(stat = "identity", width = 0.5) +
+  labs(title = "Gender Purchase Gap among Cities",y = "Avg Purchase", x = "City") +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_y_continuous(breaks = c(0,500000,1000000,1500000), labels = c("0","500k","1m","1.5m"))
+```
+
+* The reasons that we chose these variables  
+We selected average purchase, city category, and gender in this graph. We set city category as the x-axis and average purchase as the y-axis, in this way, we can clearly compare the average purchase amounts among the three cities. The factor variable city category can bring us a new perspective on how purchase amounts are diverse among the three cities. Moreover, the Gender variable breaks out the average purchase amount of each city that helps us better understand the gender purchase gap for each cities.  
+* The reasons that we used this type of visualization  
+We used geom_bar because average purchase is a continuous variable; therefore, we can use a bar chart to graph the sum of weights in the cities. 
+* Improvements to the graph  
+We divided every single value by 0.5 billion to make the labels on the y-axis more precise. 
+We changed the labels on the y-axis to a more descriptive format. Also, we change the fill of the bar to gender to provide more comparison in one graph.
+We set the title for the graph and the label for the x and y-axis.  
+* The question we are trying to answer  
+We are trying to find purchase gap by Gender among the three cities. Specifically, we want to know which city has the largest purchasing power during the Black Friday and whether men or women have made a larger effect.
+* Conclusion  
+After looking through the graph carefully, the City A has the largest purchasing amount and therefore creates the relatively highest profit for the stores. Moreover, on average, males mainly purchase more than females.
+
+**Chart 6**
+
+```{r}
+Stay_Purchase = BF %>%
+  group_by(Stay_In_Current_City_Years, City_Category) %>% 
+  summarise(n = n_distinct(User_ID),
+            Total_Purchase = sum(Purchase)) %>%
+  mutate(Avg_Purchase = Total_Purchase/n)
+ggplot(Stay_Purchase, aes(x = Stay_In_Current_City_Years, y = Avg_Purchase, fill = City_Category)) +
+  geom_bar(stat = "identity", position = "dodge", width = 0.5) +
+  labs(title = "Relationship between Avg Purchase and Living Time", x = "Stay in Current City Years", y = "Avg Purchase", fill = "City Category") +
+  scale_y_continuous(breaks = c(0,300000,600000,900000), labels = c("0", "300k", "600k", "900k")) +
+  theme(plot.title = element_text(hjust = 0.5)) +
+  scale_fill_manual(values = brewer.pal(n = 3, name = "Set2"))
+```
+
+* The reasons that we chose these variables  
+We chose the living time as the x-variable and average purchase as the y-variable and used city category to divide up the living time. We did this because we want to see the relationship between average purchase and living time in different city categories.  
+* The reasons that we used this type of visualization  
+We used a bar chart becasue it can clearly show whether people who stay longer are more likely to spend more across Cities A, B and C.  
+* Improvements to the graph  
+For aesthetics, we filled the plot with different colors for different city categories to make it beautiful and easy to compare.  
+We also used the scale_y_continuous function to set breaks and lables of y-axis to make it more readable. 
+We added a title to the plot and used the theme function to make the title in the center.  
+* The question we are trying to answer  
+We want to see across Cities A, B and C, whether people who stay longer tend to spend more or whether people who stay shorter tend to spend more.  
+* Conclusion  
+From this chart, we can conclude that people who stay in current cities for less than one year are more likely to spend more than people who stay for a long time. In addition, people in City A and City B have stronger purchasing power than those in City C.
+
+**Chart 7**
+
+```{r}
+Category1_Purchase = BF %>%
+  group_by(Product_Category_1) %>% 
+  summarize(Times_Purchased = n(), Total_Purchase = sum(Purchase), Total_Customer = sum(n_distinct(User_ID)))
+Category1_Purchase1 = data.frame(Category1_Purchase$Product_Category_1, Category1_Purchase$Times_Purchased, Category1_Purchase$Total_Purchase,Category1_Purchase$Total_Customer)
+colnames(Category1_Purchase1) = c("Product Category 1", "Number of Products Purchased", "Total Amount Purchased ($)", "Total Number of Customers")
+knitr::kable(Category1_Purchase1)
+```
+
+* The reasons that we chose these variables  
+We chose and created these variables in the table because we want to see which product category is the most popular of all, measured by the total number of products purchased within that category, total amount of money spends on that category, and total number of customers of that category.  
+* The reasons that we used this type of visualization  
+Tables are clearer than plots when we are comparing many categories, 18 in this case, based on several different criteria. Also, tables are powerful tools of comparison because they are sortable. If we would like to see, say, which category has the greatest number of customers, all we need to do is to sort the table by the last column, Total Number of Customers.  
+* Improvements to the table  
+Nothing much we needed to do as the table is self-explanatory. The only thing we did is that we created some understandable column names.  
+* The question we are trying to answer  
+We are trying to find out which category is the most popular among all, measured by 3 different criteria.  
+* Conclusion  
+We can conclude that category 5 has the highest number of products purchased, category 1 attracts the most customers, and more money were spent on products of category 1 than on any other categories.
+
+***
+
+> #### 4) Preliminary Statistical Analyses
+
+**Statistical Analysis 1**
+
+If marital status is a determinant of purchase amount across 3 cities.
+
+```{r}
+CityA0 = BF %>% 
+  filter(City_Category == "A" & Marital_Status == 0) %>% 
+  group_by(User_ID) %>% 
+  summarize(TotalPurchase = sum(Purchase))
+CityA1 = BF %>% 
+  filter(City_Category == "A" & Marital_Status == 1) %>% 
+  group_by(User_ID) %>% 
+  summarize(TotalPurchase = sum(Purchase))
+CityB0 = BF %>% 
+  filter(City_Category == "B" & Marital_Status == 0) %>% 
+  group_by(User_ID) %>% 
+  summarize(TotalPurchase = sum(Purchase))
+CityB1 = BF %>% 
+  filter(City_Category == "B" & Marital_Status == 1) %>% 
+  group_by(User_ID) %>% 
+  summarize(TotalPurchase = sum(Purchase))
+CityC0 = BF %>% 
+  filter(City_Category == "C" & Marital_Status == 0) %>% 
+  group_by(User_ID) %>% 
+  summarize(TotalPurchase = sum(Purchase))
+CityC1 = BF %>% 
+  filter(City_Category == "C" & Marital_Status == 1) %>% 
+  group_by(User_ID) %>% 
+  summarize(TotalPurchase = sum(Purchase))
+```
+
+```{r}
+t.test(CityA0$TotalPurchase, CityA1$TotalPurchase)
+t.test(CityB0$TotalPurchase, CityB1$TotalPurchase)
+t.test(CityC0$TotalPurchase, CityC1$TotalPurchase)
+```
+
+From the third plot we made earlier, we were unable to see a significant difference in average purchase between unmarried and married shoppers across three cities. That is why we did three t-tests here to see if a difference actually exists.  
+We chose to use t-test here because it can tell us if a difference between two population means exist. T-tests work between two continuous variables, purchases in this case.  
+We are trying to answer the question of whether a true difference in average purchase between married and unmarried shoppers exists across three cities.  
+We are unable to reject the null in all three t-tests, given p-values that large. Therefore, we conclude that there is a big chance that the true difference is actually 0 in all three cities. In other words, marriage does not really influence purchase on any significant scale.
+
+**Statistical Analysis 2**
+
+If age is corrleated with purchase amount.
+
+```{r}
+Age1 = BF %>% 
+  group_by(User_ID, Age) %>% 
+  summarise(Total_Purchase = sum(Purchase))
+Age1$Age = as.numeric(Age1$Age)
+cor(Age1$Age, Age1$Total_Purchase)
+```
+
+It was not clear to us if there is a special relationship between age and purchase from the first plot we made. It looks like there is some non-linear relationship, quadratic relationship most likely, but we want to check to see if there is a linear one first. This is why we use these two variables in this correlation test.  
+Correlation tests work well for both discrete and continuous data. In this case, we are testing a correlation relationship between a discrete variable, age groups, and a continuous variable, purchase.  
+We are trying to answer the question of whether there is a linear relationship (correlation) between these two variables.  
+The result of this test is telling us that there is a very weak negative correlation between the two variables. It is hard to say if this result is significant enough for us to draw any conclusions. Therefore, we will go for a non-linear relationship test between these two variables in the future.
+
+**Statistical Analysis 3**
+
+If occupation is corrleated with purchase amount.
+
+```{r}
+Occupation1 = BF %>% 
+  group_by(User_ID, Occupation) %>% 
+  summarise(Total_Purchase = sum(Purchase))
+Occupation1$Occupation = as.numeric(Occupation1$Occupation)
+cor(Occupation1$Occupation, Occupation1$Total_Purchase)
+```
+
+From the fourth plot we did above, it was not really clear if there is a relationship between occupations and purchases, at least not visually identifiable. This is why we did this test: to check if occupation is in some way correlated with purchase.  
+We chose the correlation test because it can be performed on any type of data. In this case, we are testing a discrete variable, age groups, against a continuous variable, purchase, and it works well.  
+It turns out that there is only a very weak positive correlation between the two variables. The correlation is too weak to be anything significant. Therefore, we conclude that there is no correlation between the two variables.
+
+**Statistical Analysis 4**
+
+The estimated effect of of gender on purchase.
+
+```{r}
+Gender1 = BF %>% 
+  group_by(User_ID, Gender) %>% 
+  summarize(Avg_Purchase = mean(Purchase))
+PG = lm(Avg_Purchase ~ Gender, data = Gender1)
+summary(PG)
+```
+
+We chose gender as the x-variable and average purchase as the y-variable. Gender is a dummy variable and average purchase is a continuous variable.  
+From the second plot we made above, we can see that males purchase more than females, and we want to figure out how gender can influence the purchase amount.  
+We used the lm function to see the relationship between gender and purchase amount. From the regression, we can see that on average, men would purchase 669.29 dollars more than women on Black Friday.  
+The null hypothesis is βi equals to 0. As the p-value is extremely small, we fail to reject the null hypothesis. Therefore gender does have an effect on average purchase.
+
+***
+
+> #### 5) Conclusion
+
+In conclusion, our analysis shows:  
+1. Data visualizations are essential for firms to understand customers and their behaviors because plots and tables can directly display the relationship among factors at the first glance.  
+2. The stores could pay more attention to target their customers in males at the age from 26 to 35 years old in the City A and City B. Furthermore, these stores could make more promotions and improvements on the Product 1 and 5. We made this prediction because this group of people took up the most significant part of the purchase amounts, and the two products are the two most popular products during the Black Friday. Also, to generate more profits, these stores can also focus on both the customers whose occupations are in 5, 19, 20; and the customers who stay in current cities for less than one year.  
+3. Both our visualizations and statistical analyses show that the marriage variable is not the key determinant of the purchase because the t-test showed that it is not statistically significant. Another interesting finding that we may extend more analyzes in the future is the correlations between age and purchase because the result looks like a non-linear regression but the visualization part showed that age matters in analyzing the customer groups.
+

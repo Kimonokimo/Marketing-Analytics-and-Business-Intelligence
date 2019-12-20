@@ -1,0 +1,151 @@
+---
+title: "RanDou_QimoLi_Ana2_final"
+author: "RanDou, QimoLi"
+date: "2018/9/30"
+output: html_document
+---
+
+## BUS211f Analyzing Big Data I
+### Brief Analysis 2: Data Visualizations using HomeZilla Data
+***
+> #### Insert Data
+
+1.set work directory to where includes the HomeZilla data.
+```{r, echo=TRUE}
+setwd("~/Desktop/2018 FAll/Big Data 1 Bhoomija Ranjan")
+```
+2.library packages.
+```{r echo=TRUE, message=FALSE, results='hide'}
+library(tidyverse)
+library(readxl)  #this package is required for using read_excel()
+library(scales)  #this package is required for using percent_format()
+```
+3.run the required code.
+```{r}
+df = read_excel("HomeZilla.xlsx")
+df_cleaned = df%>%filter(type == "house")
+```
+**Briefly Explanation**: After loading the HomeZilla data frame into the environment, we need to clear the data frame by extracting those data which are not in the type of 'house'. For example, the type corresponding to Web ID V1015146 is shown as vacant, which might effect the result of further analyses.  
+
+***  
+> #### Plotting Set 1
+
+##### 1. Create a ggplot2 histogram of house sub-types. Approximately what proportion of houses are detached?
+```{r}
+df_cleaned %>%
+  group_by(subtype) %>%  #catogorize each subtype of house.
+  ggplot(aes(subtype, alpha = 0.6)) +  #set aesthetic layer for ggplot
+  geom_bar(aes(y = ..prop.., group = 1), width = 0.3) + #subtypes are discrete values; therefore, we choose geom_bar instead of geom_histogram. Also, set y-axis for this plot
+  scale_y_continuous(labels = percent_format()) +  #change lable to percentage format
+  ggtitle("Proportion of Houses Subtypes") +  #set title for the plot
+  xlab("House Subtypes") +  #set label for x-axis
+  ylab("Proportion") +  #set label for y-axis
+  theme(legend.position="none")  #remove all the legends
+```
+
+##### 2. Create a ggplot2 histogram of bathrooms with different colours for house sub-types.
+```{r}
+df_bathrooms <- df_cleaned %>%
+  group_by(bathrooms, subtype) %>%
+  tally()
+df_bathrooms %>%
+  ggplot(aes(x = bathrooms, y = n, fill = factor(subtype), alpha = 0.5)) +  #set the aesthetic layer for the plot
+  geom_col(position = position_dodge(preserve = "single")) +  #bathrooms are discrete values; therefore, we choose geom_col. Mapping a col_plot, and set position as dodge
+  ggtitle("Bathrooms for Different House Subtypes") +  #set title for the plot
+  xlab("Bathrooms") +  #set label for x-axis
+  ylab("Count") +  #set label for y-axis
+  guides(alpha = FALSE) +  #hide the alpha legend
+  theme(legend.position = "right") +  #move legends to the bottom
+  scale_fill_manual(values = c("black", "#FF6666", "gray"))  #change the color of the plot
+```
+
+##### 3. Create a ggplot2 scatter-plot of how price varies with the area of the house. Add a line of best fit to this plot.
+```{r}
+df_cleaned %>%
+  ggplot(aes(x = sqfoot, y = price/1000)) +  #set sqfoot(house area) as x-axis and price/1000(price in thousand) as y-axis
+  geom_point(size = 1) +  #mapping a scatter-plot, and change the size of points to 1
+  geom_smooth(col = "#FF6666", method = "lm", se = FALSE) +  #draw a line that best fit to this plot
+  ggtitle("How Price Varies with the area of the House") +  #set title for the plot
+  xlab("House Area (square foot)") +  #set label for x-axis
+  ylab("Price (thousand)")  #set label for y-axis
+```
+
+***  
+> #### Plotting Set 2
+
+##### 1. One informative, well-labeled univariate graph.  
+
+* Why this variable?  
+We select price as the univariable of this plot. We made this selection because we noticed that the price varies from 99900 to 2798000, which is a vast distinction, so we want to figure out the distribution of the price.  
+* Why this type of visualization?  
+We use geom_histogram for this variable. The reason is that price is a continuous variable; therefore, we can use a histogram to graph the frequency of the chosen variable.  
+* Improvements to the graph.  
+*Aesthetic Layer:* As price is the only variable in the graph, we set it as the x-axis. Moreover, we divided every single value by 1000 to make the labels on the x-axis more precise. Another improvement we made on the aesthetic layer is that we fill the histogram plot using black with 0.5 transparency.  
+*Coordinates Layer:* We changed the labels on the y-axis to percentage format.  
+*Theme Layer:* We set the title for the graph and the label for x and y-axis.  
+* The question we are trying to answer.  
+We are trying to figure out the distribution of the price. Specifically, we want to know the frequency and the mode of the house price.
+* Conclusion.  
+After looking through the graph vividly, the majority of house searching matches are in the price interval 100 to 900 thousands dollars, and the mode of price seems to be around 300 to 500 thousands dollars.  
+  
+```{r message=FALSE, warning=FALSE}
+df_cleaned %>%
+  ggplot(aes(x = price/1000, y=..count../sum(..count..))) +  #insert data layer, set price/1000 as x-axis
+  geom_histogram(breaks=seq(0,3000,by=100), fill = "black", alpha = 0.5) +  #set the aesthetic layer for the graph, change color to black and alpha to 0.5
+  scale_y_continuous(labels = percent_format()) +  #change lables on the y-axis to percentage format
+  ggtitle("Distribution of Price") +  #set title for the graph
+  xlab("Price (thousand)") +  #set label for x-axis
+  ylab("Proportion")  #set label for y-axis
+```
+
+##### 2. One informative, well-labeled graph of a continuous variable broken out by different levels of a factor variable.   
+
+* Why this variable?   
+For this graph, we chose price as our major variable as well, and we selected the house subtype to break out the price. First of all, the price is a continuous variable, so that we can derive more descriptive statistics from it. Second, house subtypes are stored as character values in the data frame, therefore, it can be easily categorized into different levels of factors.
+* Why this type of visualization?  
+We use geom_boxplot to map this graph. Boxplot can display statistics more precisely and directly, and it shows the median, two hinges and two whiskers in a single graph. Moreover, we can have a better understanding of the price differences between three house subtypes by comparing the positioning of three individual boxes.  
+* Improvements to the graph.  
+*Aesthetic Layer:* Same as the previous graph, we divided the price by 1000 to make labels on the y-axis prettier. Moreover, we colored the boxes by different levels of the factor variables with 0.5 transparency. Also, we set the width of the boxplot as 0.3.  
+*Coordinates Layer:* To have our plots follow the same color palette, we change the fill of boxes.  
+*Theme Layer:* We set the title for the graph and the label for x and y-axis.  
+* The question we are trying to answer.  
+We are trying to provide a direct view of the distribution of price for different subtypes. Throughout the graph, we want to conclude the distribution interval and the median for each subtype. Moreover, we want to define the characteristics for three subtypes and find the customer cluster that fit each type best.
+* Conclusion.  
+We can conclude from the graph that the subtype 'Single Family Detached' has a distinctively wider distribution interval than the other two subtypes. This result might be influenced by the quantity of value in the data frame, but the main idea is that 'Single Family Detached' is capable of provide a wider range of choices for customers. Moreover, 'Condo Apartment' and 'Townhouse' have a similar median of price while 'Single Family Detached' has a higher median than them. Therefore, we made preliminary conclusion that "Condo Apartment" is more fittable for people who have low budget; "Townhouse" is a better choice for those who have clear preference and don't want to spend much time on house filtering; and 'Single Family Detached' is excellent for people with higher price budget and willing to choose a house more carefully through a lot of screening.
+
+```{r}
+df_cleaned %>%
+  group_by(subtype) %>%  #group the row of the data frame by the subtype of house
+  ggplot(aes(x = subtype, y = price/1000, fill = factor(subtype))) +   #insert data layer and set the aesthetic layer for the graph. Use factor(subtype) to set the color.
+  geom_boxplot(width = 0.3, col = "Gray25", alpha = 0.5) +   #Mapping a boxplot, which is categorized by different subtypes of house.
+  scale_fill_manual(values = c("gray", "#FF6666", "Black")) +  #change the color of the plot
+  ggtitle("Distribution of Price for Different Subtype") +   #set title for the graph
+  xlab("House Subtypes") +   #set label for x-axis
+  ylab("Price (thousand)")   #set label for y-axis
+```
+
+##### 3. One informative, well-labeled bivariate (x-y) graph displaying the relationship between two numerical variables, broken out by different levels of a factor variable.  
+
+* Why this variable?  
+We use house area(sqfoot), price, and subtype in this graph. We set sqfoot as x-axis and price as y-axis, in this way, when mapping lines in the graph, the slope can represent the price per unit. Moreover, we use subtype as a differentiating factor to break out the bivariate graph by different colors. This factor variable can bring us a new perspective on how unit prices are diverse among the three subtypes.
+* Why this type of visualization?  
+We use geom_point and geom_smooth to map this graph. First, sqfoot and price are both stored as continuous numerical values, hence, using scatterplot is great to display the relationship between these two variables. Second, geom_smooth is used to draw lines that best fit to three scatter-plot for each subtype. The simplified regression line can provide us with a straightforward view of the unit price.
+* Improvements to the graph.  
+*Aesthetic Layer:* Same as the previous graph, we divided the price by 1000 to make labels on the y-axis prettier. Moreover, we colored the boxes by different levels of the factor variables. As for the regression line, we set size as 0.5 and make the confidence interval invisible.    
+*Coordinates Layer:* To have our plots follow the same color palette, we change the fill of boxes.  
+*Theme Layer:* We set the title for the graph and the label for x and y-axis.  
+* The question we are trying to answer.   
+We are trying to figure out the relationship between house area and price, and realize the differences between the unit prices of three house subtypes. In this way, we will be able to understand the different pricing strategy of three house subtypes.
+* Conclusion.  
+After analyzing the graph vividly, we noticed that, in general, the price increase along with the house area, which means that the two variable has a positive correlation. More specifically, after categorizing the subtypes into three classes, we found out that 'Condo Apartment' regression has a higher positive slope. Therefore, it is reasonable for us to believe that 'Condo Apartment' has a higher unit price than the other. Moreover, although 'Single Family Detached' and 'Townhouse' have a similar slope of the regression line, 'Single Family Detached' has a higher intercept on the y-axis. In this way, for the same house area, the subtype 'Townhouse' is more cost-effective. In conclusion, for the cost-effective purpose, 'Townhouse' is the best, and 'Condo Apartment' is the most expensive one.
+
+```{r}
+df_cleaned %>%
+  ggplot(aes(x = sqfoot, y = price/1000, col = factor(subtype))) +   #insert data layer and set the aesthetic layer for the graph. Use factor(subtype) to set the color
+  geom_point() +   #mapping a scatterplots to display the relationship between house area and price
+  geom_smooth(method = "lm", se = FALSE, size = 0.5) +   #draw three lines that best fit to three scatter-plot for different subtypes
+  scale_color_manual(values = c("gray", "#FF6666", "Black")) +   #change the color of the plot
+  ggtitle("Price vs House Area") +   #set title for the graph
+  xlab("House Area (square foot)") +   #set label for x-axis
+  ylab("Price (thousand)")   #set label for y-axis
+```
